@@ -363,6 +363,7 @@ export async function startGatewayServer(
     removeChatRun,
     chatAbortControllers,
     toolEventRecipients,
+    unixSocketPath,
   } = await createGatewayRuntimeState({
     cfg: cfgAtStart,
     bindHost,
@@ -715,6 +716,7 @@ export async function startGatewayServer(
     wss,
     httpServer,
     httpServers,
+    unixSocketPath,
   });
 
   return {

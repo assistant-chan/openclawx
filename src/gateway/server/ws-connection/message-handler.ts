@@ -30,7 +30,7 @@ import {
   AUTH_RATE_LIMIT_SCOPE_SHARED_SECRET,
   type AuthRateLimiter,
 } from "../../auth-rate-limit.js";
-import { authorizeGatewayConnect, isLocalDirectRequest } from "../../auth.js";
+import { authorizeGatewayConnect, isLocalDirectRequest, isUnixSocketConnection } from "../../auth.js";
 import { buildDeviceAuthPayload } from "../../device-auth.js";
 import { isLoopbackAddress, isTrustedProxyAddress, resolveGatewayClientIp } from "../../net.js";
 import { resolveNodeCommandAllowlist } from "../../node-command-policy.js";
@@ -661,7 +661,8 @@ export function attachGatewayWsMessageHandler(params: {
           return;
         }
 
-        const skipPairing = allowControlUiBypass && sharedAuthOk;
+        const isUnixSocket = isUnixSocketConnection(upgradeReq);
+        const skipPairing = (allowControlUiBypass && sharedAuthOk) || (isUnixSocket && sharedAuthOk);
         if (device && devicePublicKey && !skipPairing) {
           const requirePairing = async (reason: string, _paired?: { deviceId: string }) => {
             const pairing = await requestDevicePairing({
@@ -775,6 +776,13 @@ export function attachGatewayWsMessageHandler(params: {
         const deviceToken = device
           ? await ensureDeviceToken({ deviceId: device.id, role, scopes })
           : null;
+
+        // Log Unix socket auto-pairing
+        if (isUnixSocket && sharedAuthOk && device) {
+          logGateway.info(
+            `unix socket connection auto-paired device=${device.id} role=${role}`,
+          );
+        }
 
         if (role === "node") {
           const cfg = loadConfig();
